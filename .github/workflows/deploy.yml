@@ -66,6 +66,5 @@ jobs:
             docker rm nest-crud-api || true
             docker run -d \
               --name nest-crud-api \
-              --env-file /path/to/.env \
-              -p 5000:5000 \
+              --env-file ~/.env \
               ${{ secrets.DOCKER_USERNAME }}/nest-crud-api:latest
