@@ -47,24 +47,57 @@ jobs:
             --platform linux/amd64 \
             --tag ${{ secrets.DOCKER_USERNAME }}/nest-crud-api:latest \
             --push .
+      - name: Build and Push MySQL Image
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            --tag ${{ secrets.DOCKER_USERNAME }}/mysql-products-db:latest \
+            --push .
 
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
+      - name: Build and Push Adminer Image
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            --tag ${{ secrets.DOCKER_USERNAME }}/adminer:latest \
+            --push .
 
-    steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.SERVER_IP }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT }}
-          script: |
-            docker pull ${{ secrets.DOCKER_USERNAME }}/nest-crud-api:latest
-            docker stop nest-crud-api || true
-            docker rm nest-crud-api || true
-            docker run -d \
-              --name nest-crud-api \
-              --env-file ~/.env \
-              ${{ secrets.DOCKER_USERNAME }}/nest-crud-api:latest
+            deploy:
+                runs-on: ubuntu-latest
+                needs: build
+            
+                steps:
+                  - name: Deploy via SSH
+                    uses: appleboy/ssh-action@master
+                    with:
+                      host: ${{ secrets.SERVER_IP }}
+                      username: ${{ secrets.SSH_USER }}
+                      key: ${{ secrets.SSH_PRIVATE_KEY }}
+                      port: ${{ secrets.SSH_PORT }}
+                      script: |
+                        docker pull ${{ secrets.DOCKER_USERNAME }}/nest-crud-api:latest
+                        docker pull ${{ secrets.DOCKER_USERNAME }}/mysql-products-db:latest
+                        docker pull ${{ secrets.DOCKER_USERNAME }}/adminer:latest
+                        
+                        docker stop nest-crud-api || true
+                        docker rm nest-crud-api || true
+                        
+                        docker run -d \
+                          --name mysql-products-db \
+                          -e MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }} \
+                          -e MYSQL_DATABASE=${{ secrets.MYSQL_DATABASE }} \
+                          -e MYSQL_USER=${{ secrets.MYSQL_USER }} \
+                          -e MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }} \
+                          -p 3306:3306 \
+                          ${{ secrets.DOCKER_USERNAME }}/mysql-products-db:latest
+                        
+                        docker run -d \
+                          --name adminer \
+                          -p 8080:8080 \
+                          ${{ secrets.DOCKER_USERNAME }}/adminer:latest
+            
+                        docker run -d \
+                          --name nest-crud-api \
+                          --env-file ~/.env \
+                          -p 5000:5000 \
+                          ${{ secrets.DOCKER_USERNAME }}/nest-crud-api:latest
+            
