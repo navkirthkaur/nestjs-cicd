@@ -1,9 +1,29 @@
 version: '3.8'
 services:
-  mysql-products-db:
-    image: mysql
+  api:
+    image: nest-crud-api
+    build:
+      context: .
+      dockerfile: Dockerfile
+      platforms:
+        - linux/amd64
     ports:
-      - 3306:${MYSQL_PORT}
+      - "${API_PORT:-5000}:5000"
+    environment:
+      MYSQL_HOST: mysql-products-db
+      MYSQL_PORT: ${MYSQL_PORT}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      NODE_ENV: production
+    depends_on:
+      - mysql-products-db
+
+  mysql-products-db:
+    image: mysql:latest
+    ports:
+      - "3306:${MYSQL_PORT}"
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
@@ -17,7 +37,7 @@ services:
     image: adminer
     restart: always
     ports:
-      - 8080:8080
+      - "8080:8080"
+
 volumes:
   mysql_products_volume:
-    driver: local
